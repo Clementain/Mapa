@@ -25,9 +25,10 @@ import org.osmdroid.views.overlay.Polyline
 
 class MainActivity : AppCompatActivity() {
     private var firstMarker: Marker? = null
+
     //private lateinit var marker: Marker
     var map: MapView? = null
-    private val REQUEST_LOCATION_PERMISSION = 1
+    private val REQUEST_PERMISSIONS_CODE = 1
     private lateinit var locationManager: LocationManager
     private lateinit var startPoint: GeoPoint
 
@@ -37,15 +38,21 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+
         locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        val permissions = arrayOf(
+            Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.WRITE_EXTERNAL_STORAGE
+        )
+
         if (ContextCompat.checkSelfPermission(
                 this,
-                Manifest.permission.ACCESS_FINE_LOCATION
+                permissions[0]
+            ) != PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(
+                this,
+                permissions[1]
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            ActivityCompat.requestPermissions(
-                this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), REQUEST_LOCATION_PERMISSION
-            )
+            ActivityCompat.requestPermissions(this, permissions, REQUEST_PERMISSIONS_CODE)
         } else {
             startLocationUpdates()
         }
@@ -98,7 +105,7 @@ class MainActivity : AppCompatActivity() {
         requestCode: Int, permissions: Array<String>, grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQUEST_LOCATION_PERMISSION) {
+        if (requestCode == REQUEST_PERMISSIONS_CODE) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 startLocationUpdates()
             }
@@ -117,22 +124,28 @@ class MainActivity : AppCompatActivity() {
             override fun onProviderDisabled(provider: String) {}
 
             @Deprecated("Deprecated in Java")
-            override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+            override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
+            }
         }
         if (ActivityCompat.checkSelfPermission(
                 this, Manifest.permission.ACCESS_FINE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
                 this, Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                this, Manifest.permission.WRITE_EXTERNAL_STORAGE
             ) != PackageManager.PERMISSION_GRANTED
         ) {
             ActivityCompat.requestPermissions(
-                this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), REQUEST_LOCATION_PERMISSION
+                this, arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE
+                ), REQUEST_PERMISSIONS_CODE
+            )
+            locationManager.requestLocationUpdates(
+                LocationManager.GPS_PROVIDER, 5000, 10f, locationListener
             )
         }
-        locationManager.requestLocationUpdates(
-            LocationManager.GPS_PROVIDER, 5000, 10f, locationListener
-        )
+
+
     }
-
-
 }
