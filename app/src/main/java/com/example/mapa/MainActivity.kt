@@ -2,18 +2,16 @@
 
 package com.example.mapa
 
-import android.Manifest
 import android.content.Context
-import android.content.pm.PackageManager
-import android.location.Location
-import android.location.LocationListener
-import android.location.LocationManager
 import android.os.Bundle
 import android.preference.PreferenceManager
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
+import com.example.mapa.API.Direcciones
+import com.example.mapa.API.DireccionesApi
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -25,61 +23,63 @@ import org.osmdroid.views.overlay.Polyline
 
 class MainActivity : AppCompatActivity() {
     private var firstMarker: Marker? = null
-
-    //private lateinit var marker: Marker
+    private lateinit var marker: Marker
     var map: MapView? = null
-    private val REQUEST_PERMISSIONS_CODE = 1
-    private lateinit var locationManager: LocationManager
-    private lateinit var startPoint: GeoPoint
 
+    private val direccionesApi: DireccionesApi by lazy {
+        Direcciones.retrofitService
+    }
 
+    //your items
     var items = ArrayList<OverlayItem>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-
-        locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        val permissions = arrayOf(
-            Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.WRITE_EXTERNAL_STORAGE
-        )
-
-        if (ContextCompat.checkSelfPermission(
-                this,
-                permissions[0]
-            ) != PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(
-                this,
-                permissions[1]
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            ActivityCompat.requestPermissions(this, permissions, REQUEST_PERMISSIONS_CODE)
-        } else {
-            startLocationUpdates()
-        }
-
-
         val ctx: Context = applicationContext
         Configuration.getInstance().load(ctx, PreferenceManager.getDefaultSharedPreferences(ctx))
+
         setContentView(R.layout.activity_main)
+
         map = findViewById<View>(R.id.map) as MapView
         map!!.setTileSource(TileSourceFactory.MAPNIK)
+
         val mapController = map!!.controller
         mapController.setZoom(19)
-        startPoint = GeoPoint(locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER))
+        val startPoint = GeoPoint(20.140153689100682, -101.15067778465794)
         mapController.setCenter(startPoint)
+
+        CoroutineScope(Dispatchers.IO).launch {
+            val coordenadas = direccionesApi.getDirections()
+            val features = coordenadas.features
+
+
+            for (feature in features) {
+                val geometry = feature.geometry
+                val coordinates = geometry.coordinates
+
+
+                println("Coordenadas de este Feature: $coordinates")
+
+            }
+        }
 
         items.add(
             OverlayItem(
                 "Title", "Description", GeoPoint(0.0, 0.0)
             )
         )
+
         firstMarker = Marker(map)
         firstMarker?.position = startPoint
         firstMarker?.setAnchor(Marker.ANCHOR_BOTTOM, Marker.ANCHOR_CENTER)
         firstMarker?.title = "Bello ITSUR"
         map?.overlays?.add(firstMarker)
+
         map?.invalidate()
+
         val line = Polyline()
+
         line.setPoints(
             arrayListOf(
                 startPoint,
@@ -93,59 +93,14 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+
         map!!.onResume()
     }
 
     override fun onPause() {
         super.onPause()
+
         map!!.onPause()
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int, permissions: Array<String>, grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQUEST_PERMISSIONS_CODE) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                startLocationUpdates()
-            }
-        }
-    }
-
-    private fun startLocationUpdates() {
-        val locationListener = object : LocationListener {
-            override fun onLocationChanged(location: Location) {
-                startPoint = GeoPoint(location.latitude, location.longitude)
-                map?.controller?.setCenter(startPoint)
-            }
-
-            override fun onProviderEnabled(provider: String) {}
-
-            override fun onProviderDisabled(provider: String) {}
-
-            @Deprecated("Deprecated in Java")
-            override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
-            }
-        }
-        if (ActivityCompat.checkSelfPermission(
-                this, Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-                this, Manifest.permission.ACCESS_COARSE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-                this, Manifest.permission.WRITE_EXTERNAL_STORAGE
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            ActivityCompat.requestPermissions(
-                this, arrayOf(
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE
-                ), REQUEST_PERMISSIONS_CODE
-            )
-            locationManager.requestLocationUpdates(
-                LocationManager.GPS_PROVIDER, 5000, 10f, locationListener
-            )
-        }
-
-
-    }
 }
