@@ -3,9 +3,11 @@
 package com.example.mapa
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Looper
 import android.preference.PreferenceManager
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
@@ -13,6 +15,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.mapa.API.Direcciones
 import com.example.mapa.API.DireccionesApi
+import com.google.android.gms.location.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -27,7 +30,12 @@ import org.osmdroid.views.overlay.Polyline
 
 class MainActivity : AppCompatActivity() {
     private var firstMarker: Marker? = null
-    private lateinit var marker: Marker
+    private var startPoint: GeoPoint? = null
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private lateinit var locationCallback: LocationCallback
+    private lateinit var locationRequest: LocationRequest
+
+    //private lateinit var marker: Marker
     var map: MapView? = null
 
     private val direccionesApi: DireccionesApi by lazy {
@@ -45,13 +53,37 @@ class MainActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_main)
 
+
+
         map = findViewById<View>(R.id.map) as MapView
         map!!.setTileSource(TileSourceFactory.MAPNIK)
 
         val mapController = map!!.controller
         mapController.setZoom(19)
-        val startPoint = GeoPoint(20.140153689100682, -101.15067778465794)
+        startPoint = GeoPoint(20.140153689100682, -101.15067778465794)
         mapController.setCenter(startPoint)
+
+// Inicializa la variable de ubicación
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+
+// Configura el callback de ubicación
+        locationCallback = object : LocationCallback() {
+            @Suppress("NAME_SHADOWING")
+            override fun onLocationResult(locationResult: LocationResult) {
+                val lastLocation = locationResult.lastLocation
+                startPoint = GeoPoint(lastLocation!!.latitude, lastLocation.longitude)
+                mapController.setCenter(startPoint)
+                firstMarker?.position = startPoint
+                map?.invalidate()
+            }
+        }
+
+// Configura la solicitud de ubicación
+        locationRequest = LocationRequest.create().apply {
+            interval = 10000
+            fastestInterval = 5000
+            priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+        }
 
         CoroutineScope(Dispatchers.IO).launch {
             val coordenadas = direccionesApi.getDirections()
@@ -99,12 +131,16 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
 
         map!!.onResume()
+        startLocationUpdates()
+
     }
 
     override fun onPause() {
         super.onPause()
 
         map!!.onPause()
+        stopLocationUpdates()
+
     }
 
     fun checkPermissions() {
@@ -141,5 +177,15 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("MissingPermission")
+    private fun startLocationUpdates() {
+        fusedLocationClient.requestLocationUpdates(
+            locationRequest, locationCallback, Looper.getMainLooper()
+        )
+    }
+
+    private fun stopLocationUpdates() {
+        fusedLocationClient.removeLocationUpdates(locationCallback)
+    }
 
 }
