@@ -25,7 +25,6 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.OverlayItem
-import org.osmdroid.views.overlay.Polyline
 
 
 class MainActivity : AppCompatActivity() {
@@ -60,7 +59,7 @@ class MainActivity : AppCompatActivity() {
 
         val mapController = map!!.controller
         mapController.setZoom(19)
-        startPoint = GeoPoint(20.140153689100682, -101.15067778465794)
+        startPoint = GeoPoint(0, 0)
         mapController.setCenter(startPoint)
 
 // Inicializa la variable de ubicación
@@ -74,6 +73,7 @@ class MainActivity : AppCompatActivity() {
                 startPoint = GeoPoint(lastLocation!!.latitude, lastLocation.longitude)
                 mapController.setCenter(startPoint)
                 firstMarker?.position = startPoint
+                coords()
                 map?.invalidate()
             }
         }
@@ -83,21 +83,6 @@ class MainActivity : AppCompatActivity() {
             interval = 10000
             fastestInterval = 5000
             priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-        }
-
-        CoroutineScope(Dispatchers.IO).launch {
-            val coordenadas = direccionesApi.getDirections()
-            val features = coordenadas.features
-
-
-            for (feature in features) {
-                val geometry = feature.geometry
-                val coordinates = geometry.coordinates
-
-
-                println("Coordenadas de este Feature: $coordinates")
-
-            }
         }
 
         items.add(
@@ -114,17 +99,17 @@ class MainActivity : AppCompatActivity() {
 
         map?.invalidate()
 
-        val line = Polyline()
+        /*    val line = Polyline()
 
-        line.setPoints(
-            arrayListOf(
-                startPoint,
-                GeoPoint(20.140462055482093, -101.15053861935188),
-                GeoPoint(20.14341707158446, -101.14984874847927),
-                GeoPoint(20.14395683454409, -101.15131101775268)
+            line.setPoints(
+                arrayListOf(
+                    startPoint,
+                    GeoPoint(20.140462055482093, -101.15053861935188),
+                    GeoPoint(20.14341707158446, -101.14984874847927),
+                    GeoPoint(20.14395683454409, -101.15131101775268)
+                )
             )
-        )
-        map?.overlays?.add(line)
+            map?.overlays?.add(line)*/
     }
 
     override fun onResume() {
@@ -186,6 +171,24 @@ class MainActivity : AppCompatActivity() {
 
     private fun stopLocationUpdates() {
         fusedLocationClient.removeLocationUpdates(locationCallback)
+    }
+
+
+    fun coords() {
+        CoroutineScope(Dispatchers.IO).launch {
+            val inicio = "${startPoint!!.longitude},${startPoint!!.latitude}"
+            val final = "-101.19970679248917,20.129289871695637"
+            val api = "5b3ce3597851110001cf6248195446ce6bac45e7851606b557eab502"
+            val coordenadas = direccionesApi.getDirections(api, inicio, final)
+            val features = coordenadas.features
+
+            for (feature in features) {
+                val geometry = feature.geometry
+                val coordinates = geometry.coordinates
+
+                println("Coordenadas de este Feature: $coordinates")
+            }
+        }
     }
 
 }
