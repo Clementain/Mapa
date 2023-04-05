@@ -30,6 +30,8 @@ import org.osmdroid.views.overlay.Polyline
 
 class MainActivity : AppCompatActivity() {
     private var firstMarker: Marker? = null
+    private var secondMarker: Marker? = null
+    private var endPoint: GeoPoint? = null
     private var startPoint: GeoPoint? = null
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
@@ -95,22 +97,10 @@ class MainActivity : AppCompatActivity() {
         firstMarker = Marker(map)
         firstMarker?.position = startPoint
         firstMarker?.setAnchor(Marker.ANCHOR_BOTTOM, Marker.ANCHOR_CENTER)
-        firstMarker?.title = "Bello ITSUR"
+        firstMarker?.title = "UBICAICON ACTUAL"
         map?.overlays?.add(firstMarker)
-
         map?.invalidate()
 
-        /*    val line = Polyline()
-
-            line.setPoints(
-                arrayListOf(
-                    startPoint,
-                    GeoPoint(20.140462055482093, -101.15053861935188),
-                    GeoPoint(20.14341707158446, -101.14984874847927),
-                    GeoPoint(20.14395683454409, -101.15131101775268)
-                )
-            )
-            map?.overlays?.add(line)*/
     }
 
     override fun onResume() {
