@@ -25,6 +25,7 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.OverlayItem
+import org.osmdroid.views.overlay.Polyline
 
 
 class MainActivity : AppCompatActivity() {
@@ -185,8 +186,13 @@ class MainActivity : AppCompatActivity() {
             for (feature in features) {
                 val geometry = feature.geometry
                 val coordinates = geometry.coordinates
+                val line = Polyline()
+                for (coordenada in coordinates) {
+                    val punto = GeoPoint(coordenada[1], coordenada[0])
+                    line.addPoint(punto)
+                }
+                map?.overlays?.add(line)
 
-                println("Coordenadas de este Feature: $coordinates")
             }
         }
     }
