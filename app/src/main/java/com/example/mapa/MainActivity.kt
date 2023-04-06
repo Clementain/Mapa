@@ -12,6 +12,7 @@ import android.preference.PreferenceManager
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
+import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -34,12 +35,14 @@ class MainActivity : AppCompatActivity() {
     private var endPoint: GeoPoint? = null
     private var startPoint: GeoPoint? = null
     private var line = Polyline()
+    private var colocar = false
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
     private lateinit var locationRequest: LocationRequest
 
     //private lateinit var marker: Marker
     var map: MapView? = null
+    private lateinit var boton: Button
 
     private val direccionesApi: DireccionesApi by lazy {
         Direcciones.retrofitService
@@ -48,6 +51,7 @@ class MainActivity : AppCompatActivity() {
     //your items
     var items = ArrayList<OverlayItem>()
 
+    @SuppressLint("MissingInflatedId", "SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         checkPermissions()
@@ -59,6 +63,7 @@ class MainActivity : AppCompatActivity() {
 
 
         map = findViewById<View>(R.id.map) as MapView
+        boton = findViewById(R.id.ubi)
         map!!.setTileSource(TileSourceFactory.MAPNIK)
 
         val mapController = map!!.controller
@@ -80,6 +85,11 @@ class MainActivity : AppCompatActivity() {
                 if (!hasCenteredMap) {
                     mapController.setCenter(startPoint)
                     hasCenteredMap = true
+                }
+                if (secondMarker != null && line.distance > 0) {
+                    line.setPoints(emptyList())
+                    map?.overlays?.remove(line)
+                    coords()
                 }
                 map?.invalidate()
             }
@@ -129,18 +139,20 @@ class MainActivity : AppCompatActivity() {
                 GestureDetector(ctx, object : GestureDetector.SimpleOnGestureListener() {
                     override fun onLongPress(e: MotionEvent) {
                         // Obtener las coordenadas del punto donde se realizó la pulsación
-                        endPoint =
-                            map?.projection!!.fromPixels(e.x.toInt(), e.y.toInt()) as GeoPoint?
-                        map?.overlays?.remove(secondMarker)
-                        secondMarker = Marker(map)
-                        secondMarker?.position = endPoint
-                        secondMarker?.setAnchor(Marker.ANCHOR_BOTTOM, Marker.ANCHOR_CENTER)
-                        secondMarker?.title = "DESTINO"
-                        map?.overlays?.add(secondMarker)
+                        if (colocar) {
+                            endPoint =
+                                map?.projection!!.fromPixels(e.x.toInt(), e.y.toInt()) as GeoPoint?
+                            map?.overlays?.remove(secondMarker)
+                            secondMarker = Marker(map)
+                            secondMarker?.position = endPoint
+                            secondMarker?.setAnchor(Marker.ANCHOR_BOTTOM, Marker.ANCHOR_CENTER)
+                            secondMarker?.title = "DESTINO"
+                            map?.overlays?.add(secondMarker)
 
-                        line.setPoints(emptyList())
-                        map?.overlays?.remove(line)
-                        coords()
+                            line.setPoints(emptyList())
+                            map?.overlays?.remove(line)
+                            coords()
+                        }
 
 
                         // Redibujar el mapa para mostrar el nuevo marcador
@@ -160,6 +172,19 @@ class MainActivity : AppCompatActivity() {
 
 
         map?.overlays!!.add(mOverlay)
+
+        boton.setOnClickListener {
+            if (colocar) {
+                colocar = false
+                boton.text = "Presiona para agregar Ubicacion"
+                map?.setBuiltInZoomControls(true)
+
+            } else {
+                colocar = true
+                boton.text = "Presiona para poder navegar/hacer zoom"
+                map?.setBuiltInZoomControls(false)
+            }
+        }
 
     }
 
