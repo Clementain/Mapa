@@ -9,6 +9,8 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Looper
 import android.preference.PreferenceManager
+import android.view.GestureDetector
+import android.view.MotionEvent
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -23,9 +25,7 @@ import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
-import org.osmdroid.views.overlay.Marker
-import org.osmdroid.views.overlay.OverlayItem
-import org.osmdroid.views.overlay.Polyline
+import org.osmdroid.views.overlay.*
 
 
 class MainActivity : AppCompatActivity() {
@@ -33,6 +33,7 @@ class MainActivity : AppCompatActivity() {
     private var secondMarker: Marker? = null
     private var endPoint: GeoPoint? = null
     private var startPoint: GeoPoint? = null
+    private var line = Polyline()
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
     private lateinit var locationRequest: LocationRequest
@@ -69,17 +70,21 @@ class MainActivity : AppCompatActivity() {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
 // Configura el callback de ubicación
+        var hasCenteredMap = false
         locationCallback = object : LocationCallback() {
             @Suppress("NAME_SHADOWING")
             override fun onLocationResult(locationResult: LocationResult) {
                 val lastLocation = locationResult.lastLocation
                 startPoint = GeoPoint(lastLocation!!.latitude, lastLocation.longitude)
-                mapController.setCenter(startPoint)
                 firstMarker?.position = startPoint
-                coords()
+                if (!hasCenteredMap) {
+                    mapController.setCenter(startPoint)
+                    hasCenteredMap = true
+                }
                 map?.invalidate()
             }
         }
+
 
 // Configura la solicitud de ubicación
         locationRequest = LocationRequest.create().apply {
@@ -100,6 +105,61 @@ class MainActivity : AppCompatActivity() {
         firstMarker?.title = "UBICAICON ACTUAL"
         map?.overlays?.add(firstMarker)
         map?.invalidate()
+
+
+        val mOverlay: ItemizedOverlayWithFocus<OverlayItem> = ItemizedOverlayWithFocus(
+            items, object : ItemizedIconOverlay.OnItemGestureListener<OverlayItem?> {
+                override fun onItemSingleTapUp(index: Int, item: OverlayItem?): Boolean {
+
+
+                    return true
+                }
+
+                override fun onItemLongPress(index: Int, item: OverlayItem?): Boolean {
+                    return false
+                }
+            }, ctx
+        )
+        mOverlay.setFocusItemsOnTap(true)
+
+        // Crear un nuevo Overlay para capturar eventos de toque
+        val touchOverlay = object : Overlay() {
+
+            private val gestureDetector =
+                GestureDetector(ctx, object : GestureDetector.SimpleOnGestureListener() {
+                    override fun onLongPress(e: MotionEvent) {
+                        // Obtener las coordenadas del punto donde se realizó la pulsación
+                        endPoint =
+                            map?.projection!!.fromPixels(e.x.toInt(), e.y.toInt()) as GeoPoint?
+                        map?.overlays?.remove(secondMarker)
+                        secondMarker = Marker(map)
+                        secondMarker?.position = endPoint
+                        secondMarker?.setAnchor(Marker.ANCHOR_BOTTOM, Marker.ANCHOR_CENTER)
+                        secondMarker?.title = "DESTINO"
+                        map?.overlays?.add(secondMarker)
+
+                        line.setPoints(emptyList())
+                        map?.overlays?.remove(line)
+                        coords()
+
+
+                        // Redibujar el mapa para mostrar el nuevo marcador
+                        map?.invalidate()
+                    }
+                })
+
+            override fun onTouchEvent(event: MotionEvent, mapView: MapView): Boolean {
+                gestureDetector.onTouchEvent(event)
+                return super.onTouchEvent(event, mapView)
+            }
+        }
+
+
+// Agregar el Overlay de eventos de toque al mapa
+        map?.overlays?.add(touchOverlay)
+
+
+        map?.overlays!!.add(mOverlay)
 
     }
 
@@ -168,15 +228,14 @@ class MainActivity : AppCompatActivity() {
     fun coords() {
         CoroutineScope(Dispatchers.IO).launch {
             val inicio = "${startPoint!!.longitude},${startPoint!!.latitude}"
-            val final = "-101.19970679248917,20.129289871695637"
+            val final = "${endPoint!!.longitude},${endPoint!!.latitude}"
             val api = "5b3ce3597851110001cf6248195446ce6bac45e7851606b557eab502"
             val coordenadas = direccionesApi.getDirections(api, inicio, final)
             val features = coordenadas.features
-
             for (feature in features) {
                 val geometry = feature.geometry
                 val coordinates = geometry.coordinates
-                val line = Polyline()
+
                 for (coordenada in coordinates) {
                     val punto = GeoPoint(coordenada[1], coordenada[0])
                     line.addPoint(punto)
