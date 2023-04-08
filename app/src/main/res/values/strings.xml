@@ -1,4 +1,4 @@
 <resources>
     <string name="app_name">Mapa</string>
-    <string name="presiona_para_agregar_ubicacion">Presiona para agregar Ubicacion</string>
+    <string name="agregar_ubicacion">Agregar Ubicacion</string>
 </resources>

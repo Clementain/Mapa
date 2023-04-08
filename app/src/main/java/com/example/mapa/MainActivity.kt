@@ -13,6 +13,7 @@ import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
 import android.widget.Button
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -39,8 +40,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
     private lateinit var locationRequest: LocationRequest
-
-    //private lateinit var marker: Marker
     var map: MapView? = null
     private lateinit var boton: Button
 
@@ -61,7 +60,6 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
 
-
         map = findViewById<View>(R.id.map) as MapView
         boton = findViewById(R.id.ubi)
         map!!.setTileSource(TileSourceFactory.MAPNIK)
@@ -71,10 +69,10 @@ class MainActivity : AppCompatActivity() {
         startPoint = GeoPoint(0, 0)
         mapController.setCenter(startPoint)
 
-// Inicializa la variable de ubicación
+        // Inicializa la variable de ubicación
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
-// Configura el callback de ubicación
+        // Configura el callback de ubicación
         var hasCenteredMap = false
         locationCallback = object : LocationCallback() {
             @Suppress("NAME_SHADOWING")
@@ -96,7 +94,7 @@ class MainActivity : AppCompatActivity() {
         }
 
 
-// Configura la solicitud de ubicación
+        // Configura la solicitud de ubicación
         locationRequest = LocationRequest.create().apply {
             interval = 10000
             fastestInterval = 5000
@@ -112,7 +110,7 @@ class MainActivity : AppCompatActivity() {
         firstMarker = Marker(map)
         firstMarker?.position = startPoint
         firstMarker?.setAnchor(Marker.ANCHOR_BOTTOM, Marker.ANCHOR_CENTER)
-        firstMarker?.title = "UBICAICON ACTUAL"
+        firstMarker?.title = "UBICACION ACTUAL"
         map?.overlays?.add(firstMarker)
         map?.invalidate()
 
@@ -120,8 +118,6 @@ class MainActivity : AppCompatActivity() {
         val mOverlay: ItemizedOverlayWithFocus<OverlayItem> = ItemizedOverlayWithFocus(
             items, object : ItemizedIconOverlay.OnItemGestureListener<OverlayItem?> {
                 override fun onItemSingleTapUp(index: Int, item: OverlayItem?): Boolean {
-
-
                     return true
                 }
 
@@ -153,8 +149,6 @@ class MainActivity : AppCompatActivity() {
                             map?.overlays?.remove(line)
                             coords()
                         }
-
-
                         // Redibujar el mapa para mostrar el nuevo marcador
                         map?.invalidate()
                     }
@@ -167,41 +161,40 @@ class MainActivity : AppCompatActivity() {
         }
 
 
-// Agregar el Overlay de eventos de toque al mapa
+        // Agregar el Overlay de eventos de toque al mapa
         map?.overlays?.add(touchOverlay)
-
-
         map?.overlays!!.add(mOverlay)
 
+        var mensaje = true
         boton.setOnClickListener {
             if (colocar) {
                 colocar = false
-                boton.text = "Presiona para agregar Ubicacion"
+                boton.text = "Agregar Ubicacion"
                 map?.setBuiltInZoomControls(true)
-
             } else {
                 colocar = true
-                boton.text = "Presiona para poder navegar/hacer zoom"
+                boton.text = "Habilitar zoom"
                 map?.setBuiltInZoomControls(false)
+                if (mensaje) {
+                    Toast.makeText(
+                        ctx, "TIP: Manten presionado para agregar la ubicacion", Toast.LENGTH_LONG
+                    ).show()
+                    mensaje = false
+                }
             }
         }
-
     }
 
     override fun onResume() {
         super.onResume()
-
         map!!.onResume()
         startLocationUpdates()
-
     }
 
     override fun onPause() {
         super.onPause()
-
         map!!.onPause()
         stopLocationUpdates()
-
     }
 
     fun checkPermissions() {
