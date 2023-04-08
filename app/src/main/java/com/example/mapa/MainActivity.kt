@@ -259,7 +259,6 @@ class MainActivity : AppCompatActivity() {
                     line.addPoint(punto)
                 }
                 map?.overlays?.add(line)
-
             }
         }
     }
